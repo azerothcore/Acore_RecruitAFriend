@@ -23,100 +23,71 @@
 --               - same IP possibly restricts or removes the bind (sorry families, roommates and the like)
 ------------------------------------------------------------------------------------------------
 
-local Config = {}
-local Config_maps = {}
-local Config_rewards = {}
-local Config_amounts = {}
-local Config_defaultRewards = {}
-local Config_defaultAmounts = {}
+-- Global tables required for external config file (RecruitAFriend_conf.lua) access
+Config = {}
+Config_maps = {}
+Config_rewards = {}
+Config_amounts = {}
+Config_defaultRewards = {}
+Config_defaultAmounts = {}
 
--- Name of Eluna dB scheme
+-- Default configuration values (can be overridden by RecruitAFriend_conf.lua)
 Config.customDbName = "ac_eluna"
-
--- set to 1 to print error messages to the console. Any other value including nil turns it off.
 Config.printErrorsToConsole = 1
-
--- min GM level to bind accounts
 Config.minGMRankForBind = 3
-
--- min GM level to read data
 Config.minGMRankForRead = 2
-
--- max RAF duration in seconds. 2,592,000 = 30days
 Config.maxRAFduration = 2592000
-
--- set to 1 to grant recruits always rested. Any other value including nil turns it off.
 Config.grantRested = 1
-
--- set to 1 to print a login message. Any other value including nil turns it off.
 Config.displayLoginMessage = 1
-
--- the level which a player must reach to reward it's recruiter and automatically end RAF
 Config.targetLevel = 58
-
--- determines if the RAF link get removed when reaching the targetLevel
 Config.endOnLevel = 1
-
--- set to 1 to grant always rested for premium past Config.targetLevel. Any other value including nil turns it off.
 Config.premiumFeature = 0
-
--- maximum number of RAF related command uses before a kick. Includes summon requests.
 Config.abuseTreshold = 1000
-
--- determines if there is a check for summoner and target being on the same Ip
 Config.checkSameIp = 1
-
--- set to 1 to end RAF if linked accounts share an IP on the first infraction. Any other value including nil turns it off.
 Config.endRAFOnSameIP = 0
-
--- text for the mail to send when rewarding a recruiter
+Config.blockRewardOnSameIp = 0
 Config.mailText = "Hello Adventurer!\nYou've earned a reward for introducing your friends to Chromie.\nDon't stop here, there might be more goods to gain.\n\n"
-
--- modify's the mail database to prevent returning of rewards. Changes sender from character to creature. Config.senderGUID points to a creature if this is 1
 Config.preventReturn = 1
-
--- GUID/ID of the player/creature. If Config.preventReturn = 1, you need to put creature ID. Else player GUID. 0 = No sender aka "From: Unknown". Creature 10667 is "Chromie".
 Config.senderGUID = 10667
-
--- stationary used in the mail sent to the player. (41 Normal Mail, 61 GM/Blizzard Support, 62 Auction, 64 Valentines, 65 Christmas) Note: Use 62, 64, and 65 At your own risk.
 Config.mailStationery = 41
-
--- should links on the same IP be removed automatically on startup / reload?
 Config.AutoKillSameIPLinks = 1
-
--- rewards towards the recruiter for certain amounts of recruits who reached the target level. If not defined for a level, send the whole set of default potions
-Config_rewards[1] = 56806    -- Mini Thor , Pet which is bound to account
-Config_rewards[3] = 21841    -- Nether Cloth Bag - 16-slot
-Config_rewards[5] = 13584    -- Diablos Stone, Pet which is bound to account
-Config_rewards[10] = 39656   -- Tyrael's Hilt, Pet which is bound to account
-
--- amount of rewards per reward_level
+Config_rewards[1] = 56806
+Config_rewards[3] = 21841
+Config_rewards[5] = 13584
+Config_rewards[10] = 39656
 Config_amounts[1] = 1
 Config_amounts[3] = 1
 Config_amounts[5] = 1
 Config_amounts[10] = 1
-
--- default rewards if nothing is set in Config_rewards for a certain level. May be changed. May NOT be removed.
-Config_defaultRewards[1] = 13454  -- Battle elixir spellpower
-Config_defaultRewards[2] = 13452  -- Battle elixir agility
-Config_defaultRewards[3] = 13453  -- Battle elixir strength
-Config_defaultRewards[4] = 5634   -- Potion of Free Action
-
+Config_defaultRewards[1] = 13454
+Config_defaultRewards[2] = 13452
+Config_defaultRewards[3] = 13453
+Config_defaultRewards[4] = 5634
 Config_defaultAmounts[1] = 10
 Config_defaultAmounts[2] = 10
 Config_defaultAmounts[3] = 10
 Config_defaultAmounts[4] = 9
-
--- The following are the allowed maps to summon to. Additional maps can be added with a table.insert() line.
--- Remove or comment all table.insert below to forbid summoning
--- Eastern kingdoms
 table.insert(Config_maps, 0)
--- Kalimdor
 table.insert(Config_maps, 1)
--- Outland
 table.insert(Config_maps, 530)
--- Northrend
---table.insert(Config_maps, 571)
+
+-- Load external configuration file (overrides defaults above)
+do
+    local scriptPath = debug.getinfo(1, "S").source:sub(2):match("(.*[\\/])") or ""
+    local confPath = scriptPath .. "RecruitAFriend_conf.lua"
+    local f = io.open(confPath, "r")
+    if f then
+        f:close()
+        -- Reset map table before loading config so config file controls allowed maps
+        Config_maps = {}
+        dofile(confPath)
+        if Config.printErrorsToConsole == 1 then
+            PrintInfo("RAF: Loaded configuration from RecruitAFriend_conf.lua")
+        end
+    else
+        PrintInfo("RAF: RecruitAFriend_conf.lua not found. Using default configuration.")
+    end
+end
 ------------------------------------------
 -- NO ADJUSTMENTS REQUIRED BELOW THIS LINE
 ------------------------------------------
@@ -259,6 +230,14 @@ local function RAF_hasIndex (tab, val)
         end
     end
     return false
+end
+
+local function RAF_grantRestedXP(player)
+    if Config.grantRested == 1 then
+        if _G.ChallengeModes == nil or not _G.ChallengeModes:isPlayerEnlisted(player) then
+            player:SetRestBonus(RAF_xpPerLevel[player:GetLevel()])
+        end
+    end
 end
 
 local function RAF_checkAbuse(accountId)
@@ -603,11 +582,7 @@ local function RAF_login(event, player)
     end
 
     -- add 1 full level of rested at login while in RAF
-    if Config.grantRested == 1 then
-        if _G.ChallengeModes == nil or not _G.ChallengeModes:isPlayerEnlisted(player) then
-            player:SetRestBonus(RAF_xpPerLevel[player:GetLevel()])
-        end
-    end
+    RAF_grantRestedXP(player)
 
     -- same IP check
     local recruiterId = RAF_recruiterAccount[accountId]
@@ -682,17 +657,27 @@ local function RAF_levelChange(event, player, oldLevel)
             -- set time_stamp to 1 and Grant rewards
             RAF_timeStamp[accountId] = 1
             CharDBExecute('UPDATE `'..Config.customDbName..'`.`recruit_a_friend_links` SET time_stamp = 1 WHERE `account_id` = '..accountId..';')
-            GrantReward(RAF_recruiterAccount[accountId])
-            player:SendBroadcastMessage("Your RAF link has reached the level-limit. Your recruiter has earned a reward. Go and bring your friends, too!")
+            if Config.blockRewardOnSameIp == 1 and RAF_sameIpCounter[accountId] ~= nil and RAF_sameIpCounter[accountId] > 0 then
+                player:SendBroadcastMessage("Your RAF link has reached the level-limit but the reward was blocked due to same IP usage.")
+                RAF_grantRestedXP(player)
+            else
+                GrantReward(RAF_recruiterAccount[accountId])
+                player:SendBroadcastMessage("Your RAF link has reached the level-limit. Your recruiter has earned a reward. Go and bring your friends, too!")
+            end
             return false
         end
     else
         if oldLevel + 1 >= Config.targetLevel then
             -- grant rewards
             if RAF_complete[accountId] == 0 then
-                GrantReward(RAF_recruiterAccount[accountId])
                 CharDBExecute('UPDATE `'..Config.customDbName..'`.`recruit_a_friend_links` SET `complete` = 1 WHERE `account_id` = '..accountId..';')
-                player:SendBroadcastMessage("Your RAF link has reached the level-limit. Your recruiter has earned a reward. Go and bring your friends, too!")
+                if Config.blockRewardOnSameIp == 1 and RAF_sameIpCounter[accountId] ~= nil and RAF_sameIpCounter[accountId] > 0 then
+                    player:SendBroadcastMessage("Your RAF link has reached the level-limit but the reward was blocked due to same IP usage.")
+                    RAF_grantRestedXP(player)
+                else
+                    GrantReward(RAF_recruiterAccount[accountId])
+                    player:SendBroadcastMessage("Your RAF link has reached the level-limit. Your recruiter has earned a reward. Go and bring your friends, too!")
+                end
                 return false
             end
         end
@@ -704,11 +689,7 @@ local function RAF_levelChange(event, player, oldLevel)
     end
 
     -- add 1 full level of rested at levelup while in RAF and not at maxlevel with Player:SetRestBonus( restBonus )
-    if Config.grantRested == 1 then
-        if _G.ChallengeModes == nil or not _G.ChallengeModes:isPlayerEnlisted(player) then
-            player:SetRestBonus(RAF_xpPerLevel[player:GetLevel()])
-        end
-    end
+    RAF_grantRestedXP(player)
 end
 
 --INIT sequence:

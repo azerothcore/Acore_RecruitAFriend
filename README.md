@@ -9,16 +9,17 @@ Compile your [Azerothcore](https://github.com/azerothcore/azerothcore-wotlk) wit
 The ElunaLua module itself doesn't require much setup/config. Just specify the subfolder where to put your lua_scripts in its .conf file.
 
 If the directory was not changed, add the .lua script to your `../lua_scripts/` directory.
-Adjust the top part of the .lua file with the config flags.
+Adjust the `RecruitAFriend_conf.lua` file with the config flags. This file must be placed in the same directory as `RecruitAFriend.lua`.
 
 ## Optional acore_cms support
 The [acore_cms](https://github.com/azerothcore/acore-cms)-RAF-module supports this Lua. It allows to add and monitor RAF links and rewards from the website.
 
 ## Admin usage:
-Adjust the top part of the .lua file with the config flags. The most important decisions are:
+Adjust the `RecruitAFriend_conf.lua` file with the config flags. The most important decisions are:
 - max duration of the raf link(default 30 days)
 - target level for a succesful link and a reward to the recruiter
 - check for same IP yes/no, auto end RAF if same IP yes/no (default check:yes, end: no)
+- block reward on same IP abuse while still granting rested XP bonus yes/no (default: no)
 - text for the RAF-reward mail (see Lua for defaults)
 - rewards as item id and amount (see Lua for defaults)
 - maps to allow summoning to (default Eastern Kingdoms and Kalimdor)
@@ -46,7 +47,7 @@ Players have 30 days (config flag) to reach the target level (default 39). If th
 
 
 ## Config:
-See the lua file for a description of the config flags.
+See `RecruitAFriend_conf.lua` for a description of the config flags. If the config file is not present, default values from `RecruitAFriend.lua` are used.
 
 
 ## Default settings/rewards:

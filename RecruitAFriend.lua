@@ -23,6 +23,7 @@
 --               - same IP possibly restricts or removes the bind (sorry families, roommates and the like)
 ------------------------------------------------------------------------------------------------
 
+-- Global tables required for external config file (RecruitAFriend_conf.lua) access
 Config = {}
 Config_maps = {}
 Config_rewards = {}
@@ -229,6 +230,14 @@ local function RAF_hasIndex (tab, val)
         end
     end
     return false
+end
+
+local function RAF_grantRestedXP(player)
+    if Config.grantRested == 1 then
+        if _G.ChallengeModes == nil or not _G.ChallengeModes:isPlayerEnlisted(player) then
+            player:SetRestBonus(RAF_xpPerLevel[player:GetLevel()])
+        end
+    end
 end
 
 local function RAF_checkAbuse(accountId)
@@ -573,11 +582,7 @@ local function RAF_login(event, player)
     end
 
     -- add 1 full level of rested at login while in RAF
-    if Config.grantRested == 1 then
-        if _G.ChallengeModes == nil or not _G.ChallengeModes:isPlayerEnlisted(player) then
-            player:SetRestBonus(RAF_xpPerLevel[player:GetLevel()])
-        end
-    end
+    RAF_grantRestedXP(player)
 
     -- same IP check
     local recruiterId = RAF_recruiterAccount[accountId]
@@ -654,11 +659,7 @@ local function RAF_levelChange(event, player, oldLevel)
             CharDBExecute('UPDATE `'..Config.customDbName..'`.`recruit_a_friend_links` SET time_stamp = 1 WHERE `account_id` = '..accountId..';')
             if Config.blockRewardOnSameIp == 1 and RAF_sameIpCounter[accountId] ~= nil and RAF_sameIpCounter[accountId] > 0 then
                 player:SendBroadcastMessage("Your RAF link has reached the level-limit but the reward was blocked due to same IP usage.")
-                if Config.grantRested == 1 then
-                    if _G.ChallengeModes == nil or not _G.ChallengeModes:isPlayerEnlisted(player) then
-                        player:SetRestBonus(RAF_xpPerLevel[player:GetLevel()])
-                    end
-                end
+                RAF_grantRestedXP(player)
             else
                 GrantReward(RAF_recruiterAccount[accountId])
                 player:SendBroadcastMessage("Your RAF link has reached the level-limit. Your recruiter has earned a reward. Go and bring your friends, too!")
@@ -672,11 +673,7 @@ local function RAF_levelChange(event, player, oldLevel)
                 CharDBExecute('UPDATE `'..Config.customDbName..'`.`recruit_a_friend_links` SET `complete` = 1 WHERE `account_id` = '..accountId..';')
                 if Config.blockRewardOnSameIp == 1 and RAF_sameIpCounter[accountId] ~= nil and RAF_sameIpCounter[accountId] > 0 then
                     player:SendBroadcastMessage("Your RAF link has reached the level-limit but the reward was blocked due to same IP usage.")
-                    if Config.grantRested == 1 then
-                        if _G.ChallengeModes == nil or not _G.ChallengeModes:isPlayerEnlisted(player) then
-                            player:SetRestBonus(RAF_xpPerLevel[player:GetLevel()])
-                        end
-                    end
+                    RAF_grantRestedXP(player)
                 else
                     GrantReward(RAF_recruiterAccount[accountId])
                     player:SendBroadcastMessage("Your RAF link has reached the level-limit. Your recruiter has earned a reward. Go and bring your friends, too!")
@@ -692,11 +689,7 @@ local function RAF_levelChange(event, player, oldLevel)
     end
 
     -- add 1 full level of rested at levelup while in RAF and not at maxlevel with Player:SetRestBonus( restBonus )
-    if Config.grantRested == 1 then
-        if _G.ChallengeModes == nil or not _G.ChallengeModes:isPlayerEnlisted(player) then
-            player:SetRestBonus(RAF_xpPerLevel[player:GetLevel()])
-        end
-    end
+    RAF_grantRestedXP(player)
 end
 
 --INIT sequence:

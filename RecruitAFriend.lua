@@ -592,7 +592,6 @@ local function RAF_login(event, player)
             CharDBExecute('UPDATE `'..Config.customDbName..'`.`recruit_a_friend_links` SET time_stamp = 0 WHERE `account_id` = '..accountId..';')
             RAF_timeStamp[accountId] = 0
         else
-            player:SendBroadcastMessage("Recruit a friend: Possible abuse detected. This action is logged.")
             if RAF_sameIpCounter[accountId] == nil then
                 RAF_sameIpCounter[accountId] = 1
             else
